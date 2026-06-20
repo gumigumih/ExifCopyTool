@@ -1,119 +1,33 @@
-ExifCopyTool v7
-
-重要:
-build_windows.bat をダブルクリックして exe を作成してください。
-このバッチは ASCII + CRLF に修正済みです。
-
-できあがるファイル:
-dist\ExifCopyTool.exe
-
-右クリックメニュー登録:
-1. dist\ExifCopyTool.exe を起動
-2. 「右クリックメニューを有効にする」にチェック
-3. 画像を右クリックして EXIFコピーを実行
-
-ログ:
-%APPDATA%\ExifCopyTool\last_context_run.log
-%APPDATA%\ExifCopyTool\error.log
-
-EXIFコピー ツール
+ExifCopyTool v8
 ================
 
-写真を右クリックして、登録したフォーマットでEXIF情報をクリップボードにコピーするWindows用ツールです。
+Windowsの右クリックメニューから画像のEXIF情報をテンプレート形式でコピーするツールです。
 
-前回版からの修正点
-----------------
-- 右クリック登録を「登録ボタン」ではなく「有効にする」チェックボックスに変更しました。
-- チェックONで自動登録、OFFで自動解除します。
-- フォーマット保存・追加・削除時、有効化済みなら右クリックメニューも自動更新します。
-- 右クリック登録先を image 関連付けだけでなく、jpg/jpeg/png/tif/tiff/heic/webp 拡張子別にも追加しました。
-- EXIF取得を ExifTool → exifread → Pillow の順で試すようにしました。
-- 「EXIF診断」ボタンを追加しました。取得できている項目を確認できます。
+■ 普通に使う場合
+1. build_windows.bat を実行
+2. dist\ExifCopyTool.exe を起動
+3. 「右クリックメニューを有効にする」にチェック
 
-使い方
-------
-1. Windowsで build_windows.bat を実行します。
-2. dist\ExifCopyTool.exe ができます。
-3. ExifCopyTool.exe を起動します。
-4. 「有効にする」にチェックを入れます。
-5. 写真ファイルを右クリックし、「EXIF情報をコピー」からフォーマットを選びます。
+■ インストーラーを作る場合
+1. Inno Setup 6 をインストール
+   https://jrsoftware.org/isdl.php
+2. build_windows.bat を実行
+3. build_installer.bat を実行
+4. installer\ExifCopyToolSetup.exe が作成されます
 
-重要：EXIF取得について
-----------------------
-このツールは exifread / Pillow だけでも最低限のEXIFを読めますが、カメラやレンズ情報は写真・メーカーによって取れない場合があります。
-一番確実にしたい場合は ExifTool を同梱してください。
+■ インストーラー版の挙動
+- インストール先: %LOCALAPPDATA%\Programs\ExifCopyTool
+- Python不要
+- Windows起動時に常駐しません
+- 右クリックした時だけ ExifCopyTool.exe が起動します
+- アンインストール時に右クリックメニューも解除します
 
-ExifTool同梱方法：
-- exiftool.exe を ExifCopyTool.exe と同じフォルダに置く
-  または
-- tools\exiftool.exe として置く
+■ exiftool.exe について
+レンズ名やメーカー独自EXIFを安定して読むには、exiftool.exe を同梱してください。
+インストーラー作成時は、このフォルダに exiftool.exe を置いてから build_installer.bat を実行すると同梱されます。
 
-開発実行
---------
-python -m pip install -r requirements.txt
-python exif_context_app.py
-
-ビルド
-------
-build_windows.bat
-
-保存場所
---------
-フォーマットと設定は以下に保存されます。
-%APPDATA%\ExifCopyTool\formats.json
-%APPDATA%\ExifCopyTool\settings.json
-
-右クリック登録について
-----------------------
-管理者権限なしで使えるよう、HKCU配下に登録します。
-Windows 11では「その他のオプションを表示」側に表示される場合があります。
-表示されない場合は、一度アプリを起動して「有効にする」をOFF→ONしてください。
-
-テンプレート例
---------------
-{Make} {Model}
-{LensModel}
-{FocalLength} / F{FNumber} / {ExposureTime} / ISO{ISO}
-{DateTimeOriginal}
-
-使える主な項目
---------------
-{Make}
-{Model}
-{LensModel}
-{FocalLength}
-{FocalLengthIn35mmFormat}
-{FNumber}
-{ExposureTime}
-{ISO}
-{DateTimeOriginal}
-{CreateDate}
-{FileName}
-{Artist}
-{Copyright}
-{Source}
-{Error}
-
-
-v3 修正メモ:
-- 右クリックメニュー経由のコピーで Tk ではなく Windows ネイティブ Clipboard API を使うように変更しました。
-- 右クリック経由で実行された内容は %APPDATA%\ExifCopyTool\last_context_run.log に記録されます。
-- 右クリックでコピーされない場合は、このログに argv / 対象ファイル / コピー予定文字列 / エラーが残ります。
-
-v4 変更点
---------
-- 右クリックメニュー実行時のクリップボード処理を Tkinter 方式に変更しました。
-- 以前の Windows ネイティブ Clipboard API で発生していた「クリップボード用メモリをロックできませんでした」への対策です。
-- Tkinter で失敗した場合のみ PowerShell の Set-Clipboard にフォールバックします。
-- 右クリック実行時のログは引き続き %APPDATA%\ExifCopyTool\last_context_run.log に出ます。
-
-
-[v5]
-- 右クリック経由のコピー処理を PowerShell Set-Clipboard + 検証を主経路に変更しました。
-- 古いビルドが残らないよう build_windows.bat で build/dist/spec を削除してからビルドします。
-- Win32 GlobalLock 方式は完全に削除しました。
-
-
-[v7]
-- 「全ファイルにも表示する」をONにしたとき、Software\Classes\*\shell にフィルタなしで登録するよう修正しました。
-- 画像専用メニューは従来どおり画像拡張子/画像関連付け側に登録します。
+■ v8変更点
+- インストーラー用の Inno Setup スクリプトを追加
+- build_installer.bat を追加
+- --register-context-menu / --unregister-context-menu を追加
+- 全ファイル表示時の AppliesTo 指定を修正

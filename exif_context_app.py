@@ -742,6 +742,18 @@ class App(tk.Tk):
 
 def main() -> None:
     try:
+        if "--register-context-menu" in sys.argv:
+            settings = load_settings()
+            settings["context_menu_enabled"] = True
+            save_settings(settings)
+            register_context_menu()
+            return
+        if "--unregister-context-menu" in sys.argv:
+            settings = load_settings()
+            settings["context_menu_enabled"] = False
+            save_settings(settings)
+            unregister_context_menu()
+            return
         if "--copy" in sys.argv:
             i = sys.argv.index("--copy")
             fmt = sys.argv[i + 1]

@@ -1,10 +1,8 @@
 @echo off
 setlocal EnableExtensions
-
-REM Move to this bat file folder safely
 pushd "%~dp0"
 
-echo [1/4] Install requirements
+echo [1/4] Checking Python
 where python >nul 2>nul
 if %ERRORLEVEL%==0 (
   set "PYTHON_CMD=python"
@@ -20,21 +18,23 @@ if %ERRORLEVEL%==0 (
   )
 )
 
+echo [2/4] Installing requirements
 %PYTHON_CMD% -m pip install --upgrade pip
 if errorlevel 1 goto :error
 %PYTHON_CMD% -m pip install -r requirements.txt
 if errorlevel 1 goto :error
 
-echo [2/4] Clean old build files
+echo [3/4] Cleaning old build files
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 if exist ExifCopyTool.spec del /q ExifCopyTool.spec
 
-echo [3/4] Build ExifCopyTool.exe
+echo [4/4] Building ExifCopyTool.exe
 %PYTHON_CMD% -m PyInstaller --noconsole --onefile --name ExifCopyTool exif_context_app.py
 if errorlevel 1 goto :error
 
-echo [4/4] Done
+echo.
+echo Done.
 echo Created: %CD%\dist\ExifCopyTool.exe
 pause
 popd
