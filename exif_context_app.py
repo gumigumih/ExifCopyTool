@@ -16,6 +16,8 @@ import shutil
 import subprocess
 import sys
 import traceback
+import time
+import ctypes
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
@@ -331,13 +333,71 @@ def render_template(template: str, data: Dict[str, str]) -> str:
     return "\n".join([line for line in lines if line.strip() and line.strip() not in bad]).strip()
 
 
-def copy_to_clipboard(text: str) -> None:
+def copy_to_clipboard_windows(text: str) -> None:
+    """Copy text using the native Windows clipboard API.
+
+    Tk clipboard sometimes works from the GUI but can be unreliable when the
+    app is launched as a short-lived hidden process from Explorer's context
+    menu. Using SetClipboardData(CF_UNICODETEXT) makes the clipboard content
+    persist after this process exits.
+    """
+    if os.name != "nt":
+        raise RuntimeError("Windows clipboard API is only available on Windows")
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+
+    # Retry because clipboard can be temporarily locked by Explorer or another app.
+    opened = False
+    for _ in range(20):
+        if user32.OpenClipboard(None):
+            opened = True
+            break
+        time.sleep(0.05)
+    if not opened:
+        raise RuntimeError("クリップボードを開けませんでした。他のアプリが使用中の可能性があります。")
+
+    try:
+        user32.EmptyClipboard()
+        data = text + "\0"
+        size = len(data.encode("utf-16-le"))
+        h_global = kernel32.GlobalAlloc(GMEM_MOVEABLE, size)
+        if not h_global:
+            raise RuntimeError("クリップボード用メモリを確保できませんでした")
+        locked = kernel32.GlobalLock(h_global)
+        if not locked:
+            kernel32.GlobalFree(h_global)
+            raise RuntimeError("クリップボード用メモリをロックできませんでした")
+        try:
+            ctypes.memmove(locked, data.encode("utf-16-le"), size)
+        finally:
+            kernel32.GlobalUnlock(h_global)
+        if not user32.SetClipboardData(CF_UNICODETEXT, h_global):
+            kernel32.GlobalFree(h_global)
+            raise RuntimeError("クリップボードへの書き込みに失敗しました")
+        # Ownership moves to the system after SetClipboardData succeeds.
+    finally:
+        user32.CloseClipboard()
+
+
+def copy_to_clipboard_tk(text: str) -> None:
     root = tk.Tk()
     root.withdraw()
     root.clipboard_clear()
     root.clipboard_append(text)
     root.update()
-    root.destroy()
+    # Keep the event loop alive very briefly so Explorer-launched copies settle.
+    root.after(100, root.destroy)
+    root.mainloop()
+
+
+def copy_to_clipboard(text: str) -> None:
+    if os.name == "nt":
+        copy_to_clipboard_windows(text)
+    else:
+        copy_to_clipboard_tk(text)
 
 
 def copy_format(format_name: str, image_paths: List[str]) -> None:
@@ -352,7 +412,29 @@ def copy_format(format_name: str, image_paths: List[str]) -> None:
             if data.get("Error"):
                 text += f"\n{data['Error']}"
         rendered.append(text)
-    copy_to_clipboard("\n\n".join(rendered))
+    final_text = "\n\n".join(rendered)
+    copy_to_clipboard(final_text)
+    write_context_log(format_name, image_paths, final_text, None)
+
+
+def write_context_log(format_name: str, image_paths: List[str], text: str, error: str | None) -> None:
+    try:
+        log = data_dir() / "last_context_run.log"
+        lines = [
+            f"time: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"argv: {sys.argv!r}",
+            f"format: {format_name}",
+            f"paths: {image_paths!r}",
+            f"text_length: {len(text)}",
+            "status: " + ("ERROR" if error else "OK"),
+        ]
+        if error:
+            lines.append(f"error: {error}")
+        lines.append("--- copied text ---")
+        lines.append(text)
+        log.write_text("\n".join(lines), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def quote_cmd(parts: List[str]) -> str:
@@ -642,9 +724,13 @@ def main() -> None:
             i = sys.argv.index("--copy")
             fmt = sys.argv[i + 1]
             paths = sys.argv[i + 2:]
-            if not paths:
-                raise RuntimeError("画像ファイルが指定されていません")
-            copy_format(fmt, paths)
+            try:
+                if not paths:
+                    raise RuntimeError("画像ファイルが指定されていません")
+                copy_format(fmt, paths)
+            except Exception as e:
+                write_context_log(fmt if 'fmt' in locals() else '', paths if 'paths' in locals() else [], '', traceback.format_exc())
+                raise
             return
         App().mainloop()
     except Exception as e:
