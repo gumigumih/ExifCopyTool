@@ -333,100 +333,94 @@ def render_template(template: str, data: Dict[str, str]) -> str:
     return "\n".join([line for line in lines if line.strip() and line.strip() not in bad]).strip()
 
 
-def copy_to_clipboard_windows(text: str) -> None:
-    """Copy text using the native Windows clipboard API.
+def copy_to_clipboard_tk(text: str, hold_ms: int = 800) -> None:
+    """Fallback copy using Tkinter clipboard.
 
-    Tk clipboard sometimes works from the GUI but can be unreliable when the
-    app is launched as a short-lived hidden process from Explorer's context
-    menu. Using SetClipboardData(CF_UNICODETEXT) makes the clipboard content
-    persist after this process exits.
+    This is intentionally kept alive for a little longer when launched from
+    Explorer's context menu, because very short-lived GUI processes can appear
+    to succeed but leave the clipboard unchanged on some Windows environments.
     """
-    if os.name != "nt":
-        raise RuntimeError("Windows clipboard API is only available on Windows")
-
-    user32 = ctypes.windll.user32
-    kernel32 = ctypes.windll.kernel32
-    CF_UNICODETEXT = 13
-    GMEM_MOVEABLE = 0x0002
-
-    # Retry because clipboard can be temporarily locked by Explorer or another app.
-    opened = False
-    for _ in range(20):
-        if user32.OpenClipboard(None):
-            opened = True
-            break
-        time.sleep(0.05)
-    if not opened:
-        raise RuntimeError("クリップボードを開けませんでした。他のアプリが使用中の可能性があります。")
-
-    try:
-        user32.EmptyClipboard()
-        data = text + "\0"
-        size = len(data.encode("utf-16-le"))
-        h_global = kernel32.GlobalAlloc(GMEM_MOVEABLE, size)
-        if not h_global:
-            raise RuntimeError("クリップボード用メモリを確保できませんでした")
-        locked = kernel32.GlobalLock(h_global)
-        if not locked:
-            kernel32.GlobalFree(h_global)
-            raise RuntimeError("クリップボード用メモリをロックできませんでした")
-        try:
-            ctypes.memmove(locked, data.encode("utf-16-le"), size)
-        finally:
-            kernel32.GlobalUnlock(h_global)
-        if not user32.SetClipboardData(CF_UNICODETEXT, h_global):
-            kernel32.GlobalFree(h_global)
-            raise RuntimeError("クリップボードへの書き込みに失敗しました")
-        # Ownership moves to the system after SetClipboardData succeeds.
-    finally:
-        user32.CloseClipboard()
-
-
-def copy_to_clipboard_tk(text: str) -> None:
     root = tk.Tk()
     root.withdraw()
     root.clipboard_clear()
     root.clipboard_append(text)
     root.update()
-    # Keep the event loop alive very briefly so Explorer-launched copies settle.
-    root.after(100, root.destroy)
+    root.after(hold_ms, root.destroy)
     root.mainloop()
 
 
-def copy_to_clipboard_powershell(text: str) -> None:
-    """Fallback clipboard copy via PowerShell Set-Clipboard."""
-    if os.name != "nt":
-        raise RuntimeError("PowerShell fallback is only available on Windows")
+def _run_hidden(args, *, input_text: str | None = None) -> str:
     import subprocess
-    subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Set-Clipboard -Value $input"],
-        input=text,
+    cp = subprocess.run(
+        args,
+        input=input_text,
         text=True,
         encoding="utf-8",
-        check=True,
+        capture_output=True,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+    if cp.returncode != 0:
+        raise RuntimeError((cp.stderr or cp.stdout or f"command failed: {args!r}").strip())
+    return cp.stdout
+
+
+def copy_to_clipboard_powershell(text: str) -> None:
+    """Copy via PowerShell Set-Clipboard and verify the clipboard content.
+
+    v5 uses this as the primary Windows path. Tkinter can return successfully
+    from an Explorer-launched short-lived process while the clipboard remains
+    unchanged on some machines. PowerShell's Set-Clipboard is slower but far
+    more reliable for this utility.
+    """
+    if os.name != "nt":
+        raise RuntimeError("PowerShell clipboard is only available on Windows")
+
+    # Windows PowerShell 5.1 is available on standard Windows installations.
+    # Send text through STDIN to avoid command-line quoting problems with
+    # Japanese paths, emoji, braces, and newlines.
+    _run_hidden(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Set-Clipboard -Value $input"],
+        input_text=text,
+    )
+
+    # Verify immediately. If another clipboard manager races us, this catches it
+    # and lets the caller try the Tk fallback.
+    got = _run_hidden(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Get-Clipboard -Raw"],
+    )
+    if got.replace("\r\n", "\n").rstrip("\n") != text.replace("\r\n", "\n").rstrip("\n"):
+        raise RuntimeError("PowerShellでコピー後の検証に失敗しました")
+
+
+def copy_to_clipboard_clip_exe(text: str) -> None:
+    """Last-resort fallback using clip.exe."""
+    if os.name != "nt":
+        raise RuntimeError("clip.exe is only available on Windows")
+    _run_hidden(["cmd", "/c", "clip"], input_text=text)
 
 
 def copy_to_clipboard(text: str) -> None:
     """Copy text to clipboard.
 
-    v4 intentionally uses Tkinter first, even on Windows. The previous native
-    Win32 GlobalAlloc/GlobalLock implementation failed on some Explorer context
-    menu launches with "クリップボード用メモリをロックできませんでした".
+    v5 behavior:
+      1. Windows: PowerShell Set-Clipboard + verification
+      2. Fallback: Tkinter clipboard, held briefly
+      3. Last resort: clip.exe
 
-    Tkinter's clipboard API is slower but stable for this short-lived utility.
-    If Tk fails on Windows, PowerShell Set-Clipboard is used as a fallback.
+    The previous native Win32 GlobalAlloc/GlobalLock implementation is removed
+    entirely because it failed on some Explorer context menu launches.
     """
-    try:
-        copy_to_clipboard_tk(text)
-        return
-    except Exception:
-        if os.name == "nt":
-            copy_to_clipboard_powershell(text)
-            return
-        raise
+    errors: list[str] = []
+    if os.name == "nt":
+        for fn in (copy_to_clipboard_powershell, copy_to_clipboard_tk, copy_to_clipboard_clip_exe):
+            try:
+                fn(text)  # type: ignore[arg-type]
+                return
+            except Exception as e:
+                errors.append(f"{fn.__name__}: {e}")
+        raise RuntimeError("クリップボードへのコピーに失敗しました: " + " / ".join(errors))
 
+    copy_to_clipboard_tk(text)
 
 def copy_format(format_name: str, image_paths: List[str]) -> None:
     formats = load_formats()
