@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ExifCopyTool</title>
+  <meta name="description" content="写真ファイルを右クリックしてEXIF情報を好きなフォーマットでコピーできるWindows向けツール。">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #20242a;
+      --muted: #5f6875;
+      --line: #d8dee7;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--primary); }
+    .hero {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .hero-inner {
+      min-height: 520px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+      gap: 48px;
+      align-items: center;
+      padding: 56px 0 44px;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 700;
+      margin: 0 0 10px;
+    }
+    h1 {
+      font-size: clamp(40px, 7vw, 76px);
+      line-height: 1.02;
+      margin: 0;
+      letter-spacing: 0;
+    }
+    .lead {
+      font-size: 19px;
+      color: var(--muted);
+      margin: 22px 0 28px;
+      max-width: 680px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .button.primary { background: var(--primary); color: white; }
+    .button.primary:hover { background: var(--primary-dark); }
+    .button.secondary { background: white; border-color: var(--line); color: var(--text); }
+    .preview {
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 8px;
+      border: 1px solid #0b1220;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(17, 24, 39, .18);
+    }
+    .preview-head {
+      display: flex;
+      gap: 7px;
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .dot:nth-child(2) { background: #f59e0b; }
+    .dot:nth-child(3) { background: #22c55e; }
+    .preview-body { padding: 22px; }
+    .menu-title { color: #93c5fd; margin: 0 0 14px; font-weight: 700; }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font: 15px/1.7 "Cascadia Code", Consolas, monospace;
+    }
+    section { padding: 54px 0; }
+    h2 { font-size: 28px; margin: 0 0 18px; letter-spacing: 0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 18px; }
+    .card p { margin: 0; color: var(--muted); }
+    .steps {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px 24px;
+    }
+    .steps li { margin: 8px 0; }
+    footer {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      padding: 26px 0 40px;
+    }
+    @media (max-width: 820px) {
+      .hero-inner { grid-template-columns: 1fr; min-height: auto; gap: 28px; }
+      .grid { grid-template-columns: 1fr; }
+      h1 { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap hero-inner">
+      <div>
+        <p class="eyebrow">Windows right-click EXIF copier</p>
+        <h1>ExifCopyTool</h1>
+        <p class="lead">写真ファイルを右クリックして、カメラ・レンズ・撮影設定を好きなフォーマットでクリップボードへコピーできます。</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/gumigumih/ExifCopyTool/releases/latest/download/ExifCopyToolSetup.exe">インストーラーをダウンロード</a>
+          <a class="button secondary" href="https://github.com/gumigumih/ExifCopyTool/releases/latest">リリースを見る</a>
+        </div>
+      </div>
+      <div class="preview" aria-label="EXIF copy preview">
+        <div class="preview-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="preview-body">
+          <p class="menu-title">右クリック → EXIF情報をコピー → SNS用</p>
+          <pre>SONY ILCE-7M4
+FE 35mm F1.4 GM
+35 mm / F1.8 / 1/250 / ISO400
+2026:06:21 10:30:00</pre>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="wrap">
+        <h2>できること</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>右クリックでコピー</h3>
+            <p>ファイルを選んでフォーマットを選ぶだけ。常駐せず、必要な時だけ起動します。</p>
+          </article>
+          <article class="card">
+            <h3>フォーマット編集</h3>
+            <p>{Make} や {LensModel} などのタグを組み合わせて、コピー内容を自由に作れます。</p>
+          </article>
+          <article class="card">
+            <h3>RAWにも対応</h3>
+            <p>JPEGやPNGに加えて、ARW、CR3、NEFなどから取得できるEXIF情報を読み取ります。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>使い方</h2>
+        <ol class="steps">
+          <li>インストーラーをダウンロードして実行します。</li>
+          <li>設定画面で右クリックメニューを有効にします。</li>
+          <li>写真ファイルを右クリックし、「EXIF情報をコピー」からフォーマットを選びます。</li>
+          <li>整形されたEXIF情報がクリップボードへコピーされます。</li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>配布情報</h2>
+        <div class="card">
+          <p>インストール先は <code>%LOCALAPPDATA%\Programs\ExifCopyTool</code> です。Pythonは不要です。アンインストール時に右クリックメニューも解除します。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 ぐみ / ExifCopyTool</div>
+  </footer>
+</body>
+</html>
