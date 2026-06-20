@@ -393,11 +393,39 @@ def copy_to_clipboard_tk(text: str) -> None:
     root.mainloop()
 
 
+def copy_to_clipboard_powershell(text: str) -> None:
+    """Fallback clipboard copy via PowerShell Set-Clipboard."""
+    if os.name != "nt":
+        raise RuntimeError("PowerShell fallback is only available on Windows")
+    import subprocess
+    subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Set-Clipboard -Value $input"],
+        input=text,
+        text=True,
+        encoding="utf-8",
+        check=True,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+
 def copy_to_clipboard(text: str) -> None:
-    if os.name == "nt":
-        copy_to_clipboard_windows(text)
-    else:
+    """Copy text to clipboard.
+
+    v4 intentionally uses Tkinter first, even on Windows. The previous native
+    Win32 GlobalAlloc/GlobalLock implementation failed on some Explorer context
+    menu launches with "クリップボード用メモリをロックできませんでした".
+
+    Tkinter's clipboard API is slower but stable for this short-lived utility.
+    If Tk fails on Windows, PowerShell Set-Clipboard is used as a fallback.
+    """
+    try:
         copy_to_clipboard_tk(text)
+        return
+    except Exception:
+        if os.name == "nt":
+            copy_to_clipboard_powershell(text)
+            return
+        raise
 
 
 def copy_format(format_name: str, image_paths: List[str]) -> None:

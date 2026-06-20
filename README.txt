@@ -81,3 +81,10 @@ v3 修正メモ:
 - 右クリックメニュー経由のコピーで Tk ではなく Windows ネイティブ Clipboard API を使うように変更しました。
 - 右クリック経由で実行された内容は %APPDATA%\ExifCopyTool\last_context_run.log に記録されます。
 - 右クリックでコピーされない場合は、このログに argv / 対象ファイル / コピー予定文字列 / エラーが残ります。
+
+v4 変更点
+--------
+- 右クリックメニュー実行時のクリップボード処理を Tkinter 方式に変更しました。
+- 以前の Windows ネイティブ Clipboard API で発生していた「クリップボード用メモリをロックできませんでした」への対策です。
+- Tkinter で失敗した場合のみ PowerShell の Set-Clipboard にフォールバックします。
+- 右クリック実行時のログは引き続き %APPDATA%\ExifCopyTool\last_context_run.log に出ます。
