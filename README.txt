@@ -9,6 +9,7 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 3. 「有効にする」にチェック
 4. 任意のファイルを右クリック → EXIF情報をコピー → フォーマットを選択
 5. 設定画面ではテンプレート編集中にサンプルEXIFでプレビューできます
+6. 設定画面のEXIFタグ候補からテンプレートへタグを挿入できます
 
 ■ 右クリック登録
 - 登録先は HKCU\Software\Classes\*\shell\ExifCopyTool と HKCU\Software\Classes\AllFilesystemObjects\shell\ExifCopyTool です

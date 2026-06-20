@@ -866,6 +866,15 @@ class App(tk.Tk):
         self.text.pack(fill="both", expand=True)
         self.text.bind("<<Modified>>", self.on_template_modified)
 
+        tag_frame = ttk.LabelFrame(right, text="EXIFタグ", padding=6)
+        tag_frame.pack(fill="x", pady=(8, 0))
+        self.tag_var = tk.StringVar(value=EXIFTOOL_TAGS[0])
+        self.tag_combo = ttk.Combobox(tag_frame, textvariable=self.tag_var, values=COMMON_KEYS, state="readonly", width=28)
+        self.tag_combo.pack(side="left", fill="x", expand=True)
+        ttk.Button(tag_frame, text="挿入", command=self.insert_selected_tag).pack(side="left", padx=(6, 0))
+        self.tag_combo.bind("<Double-Button-1>", self.insert_selected_tag)
+        self.tag_combo.bind("<Return>", self.insert_selected_tag)
+
         sample_frame = ttk.Frame(right)
         sample_frame.pack(fill="x", pady=8)
         ttk.Button(sample_frame, text="保存", command=self.save_current).pack(side="left")
@@ -945,6 +954,13 @@ class App(tk.Tk):
             text = "プレビューできる出力がありません。テンプレートに {Make} などのタグを入力してください。"
         self.preview.delete("1.0", "end")
         self.preview.insert("1.0", text)
+
+    def insert_selected_tag(self, _event: Any = None) -> None:
+        tag = self.tag_var.get().strip()
+        if not tag:
+            return
+        self.text.insert("insert", "{" + tag + "}")
+        self.text.focus_set()
 
     def save_current(self, show_message: bool = True) -> None:
         if not self.formats:
