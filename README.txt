@@ -6,6 +6,7 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 ■ 普通に使う場合
 1. build_windows.bat を実行
 2. dist\ExifCopyTool.exe を起動
+   - アプリアイコンは assets\ExifCopyTool.ico を使用します
 3. 「有効にする」にチェック
 4. 任意のファイルを右クリック → EXIF情報をコピー → フォーマットを選択
 

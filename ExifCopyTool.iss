@@ -25,6 +25,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
+SetupIconFile=assets\ExifCopyTool.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
