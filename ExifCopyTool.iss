@@ -1,6 +1,6 @@
 #define MyAppName "ExifCopyTool"
-#define MyAppVersion "0.8.0"
-#define MyAppPublisher "Megumi Tools"
+#define MyAppVersion "0.10.0"
+#define MyAppPublisher "ぐみ ( meggumi.com )"
 #define MyAppExeName "ExifCopyTool.exe"
 
 [Setup]
@@ -8,6 +8,12 @@ AppId={{A39C53E9-0365-4BCB-B901-55B8C0D4A15F}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL=https://meggumi.com
+AppSupportURL=https://meggumi.com
+AppUpdatesURL=https://meggumi.com
+VersionInfoCompany=ぐみ ( meggumi.com )
+VersionInfoCopyright=© 2026 ぐみ
+VersionInfoProductName={#MyAppName}
 DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
@@ -17,7 +23,6 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
-SetupIconFile=
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]

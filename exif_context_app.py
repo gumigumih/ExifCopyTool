@@ -4,6 +4,7 @@ EXIF Copy Tool - Windows context menu utility.
 Features:
 - GUI for editing output formats
 - Enable/disable Windows right-click menu with a checkbox
+- Choose which file extensions should show the context menu
 - Automatically updates context menu when formats are saved while enabled
 - Copy EXIF text to clipboard from context menu
 - Uses bundled exiftool.exe when present; falls back to exifread/Pillow
@@ -42,16 +43,21 @@ except Exception:
 APP_NAME = "ExifCopyTool"
 APP_TITLE = "EXIFコピー"
 
-# Register in several places because Windows context menu visibility differs by environment.
-MENU_KEY_ALL_FILES = r"Software\Classes\*\shell\ExifCopyTool"
+# Context menu is registered per extension.
+# Registering for all files (*) is intentionally avoided because it is unreliable
+# across Windows 10/11 and Explorer association settings.
 MENU_KEY_IMAGE = r"Software\Classes\SystemFileAssociations\image\shell\ExifCopyTool"
-IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".webp"]
-MENU_KEYS_EXT = [rf"Software\Classes\SystemFileAssociations\{ext}\shell\ExifCopyTool" for ext in IMAGE_EXTENSIONS]
-ALL_MENU_KEYS = [MENU_KEY_ALL_FILES, MENU_KEY_IMAGE] + MENU_KEYS_EXT
+DEFAULT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".webp"]
+KNOWN_EXTENSIONS = sorted(set(DEFAULT_EXTENSIONS + [".jpe", ".jfif", ".bmp", ".gif", ".avif", ".raw", ".arw", ".cr2", ".cr3", ".nef", ".nrw", ".orf", ".rw2", ".dng", ".raf", ".pef", ".srw"]))
+
+def menu_key_for_extension(ext: str) -> str:
+    return rf"Software\Classes\SystemFileAssociations\{ext}\shell\ExifCopyTool"
+
+ALL_MENU_KEYS = [MENU_KEY_IMAGE] + [menu_key_for_extension(ext) for ext in KNOWN_EXTENSIONS]
 
 DEFAULT_SETTINGS = {
     "context_menu_enabled": False,
-    "register_all_files": False,
+    "registered_extensions": DEFAULT_EXTENSIONS,
 }
 
 DEFAULT_FORMATS = [
@@ -481,10 +487,50 @@ def delete_tree(root: Any, subkey: str) -> None:
         return
 
 
+def normalize_extensions(value: Any) -> List[str]:
+    if isinstance(value, str):
+        raw = value.replace("、", ",").replace(";", ",").replace(" ", ",").split(",")
+    elif isinstance(value, list):
+        raw = value
+    else:
+        raw = DEFAULT_EXTENSIONS
+    result: List[str] = []
+    for item in raw:
+        ext = str(item).strip().lower()
+        if not ext:
+            continue
+        if not ext.startswith("."):
+            ext = "." + ext
+        # Keep this conservative; registry paths should not contain separators.
+        if any(ch in ext for ch in ["\\", "/", "*", "?", '"', "<", ">", "|"]):
+            continue
+        if len(ext) > 16:
+            continue
+        if ext not in result:
+            result.append(ext)
+    return result or DEFAULT_EXTENSIONS.copy()
+
+
+def extension_text(extensions: List[str]) -> str:
+    return ", ".join(normalize_extensions(extensions))
+
+
+def registered_menu_keys_from_settings() -> List[str]:
+    settings = load_settings()
+    exts = normalize_extensions(settings.get("registered_extensions", DEFAULT_EXTENSIONS))
+    previous = normalize_extensions(settings.get("last_registered_extensions", []))
+    keys = [MENU_KEY_IMAGE]
+    for ext in sorted(set(KNOWN_EXTENSIONS + exts + previous)):
+        keys.append(menu_key_for_extension(ext))
+    # Also remove the old all-files key from v7/v8, if present.
+    keys.append(r"Software\Classes\*\shell\ExifCopyTool")
+    return keys
+
+
 def unregister_context_menu() -> None:
     if winreg is None:
         raise RuntimeError("Windows専用機能です")
-    for key in ALL_MENU_KEYS:
+    for key in registered_menu_keys_from_settings():
         delete_tree(winreg.HKEY_CURRENT_USER, key)
 
 
@@ -524,11 +570,15 @@ def register_context_menu() -> None:
     unregister_context_menu()
     formats = load_formats()
     settings = load_settings()
-    keys = [MENU_KEY_IMAGE] + MENU_KEYS_EXT
-    for key in keys:
-        register_one_menu(key, formats, applies_to_images=True)
-    if settings.get("register_all_files"):
-        register_one_menu(MENU_KEY_ALL_FILES, formats, applies_to_images=False)
+    exts = normalize_extensions(settings.get("registered_extensions", DEFAULT_EXTENSIONS))
+    # Keep the generic image association for environments where it works,
+    # plus explicit extension registrations for predictable visibility.
+    register_one_menu(MENU_KEY_IMAGE, formats, applies_to_images=True)
+    for ext in exts:
+        register_one_menu(menu_key_for_extension(ext), formats, applies_to_images=True)
+    settings["registered_extensions"] = exts
+    settings["last_registered_extensions"] = exts
+    save_settings(settings)
 
 
 def sync_context_menu_enabled(enabled: bool) -> None:
@@ -577,11 +627,16 @@ class App(tk.Tk):
         options = ttk.LabelFrame(top, text="右クリックメニュー", padding=8)
         options.pack(fill="x", pady=(0, 10))
         self.enabled_var = tk.BooleanVar(value=bool(self.settings.get("context_menu_enabled")))
-        self.all_files_var = tk.BooleanVar(value=bool(self.settings.get("register_all_files")))
-        ttk.Checkbutton(options, text="有効にする（チェックONで自動登録 / OFFで自動解除）", variable=self.enabled_var, command=self.on_enabled_changed).pack(side="left")
-        ttk.Checkbutton(options, text="全ファイルにも表示する（通常はOFF推奨）", variable=self.all_files_var, command=self.on_all_files_changed).pack(side="left", padx=16)
+        ttk.Checkbutton(options, text="有効にする（チェックONで自動登録 / OFFで自動解除）", variable=self.enabled_var, command=self.on_enabled_changed).grid(row=0, column=0, sticky="w")
+        ttk.Label(options, text="表示する拡張子").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        self.extensions_var = tk.StringVar(value=extension_text(normalize_extensions(self.settings.get("registered_extensions", DEFAULT_EXTENSIONS))))
+        ext_entry = ttk.Entry(options, textvariable=self.extensions_var, width=72)
+        ext_entry.grid(row=1, column=1, sticky="ew", padx=8, pady=(8, 0))
+        ttk.Button(options, text="拡張子を保存して再登録", command=self.on_extensions_changed).grid(row=1, column=2, sticky="e", pady=(8, 0))
+        ttk.Label(options, text="例: .jpg, .jpeg, .png, .heic, .arw, .dng").grid(row=2, column=1, sticky="w", padx=8)
+        options.columnconfigure(1, weight=1)
         self.status_var = tk.StringVar(value="")
-        ttk.Label(options, textvariable=self.status_var).pack(side="left", padx=8)
+        ttk.Label(options, textvariable=self.status_var).grid(row=3, column=0, columnspan=3, sticky="w", pady=(8, 0))
 
         body = ttk.Frame(top)
         body.pack(fill="both", expand=True)
@@ -653,12 +708,18 @@ class App(tk.Tk):
             self._refresh_status()
             messagebox.showerror("右クリック設定エラー", str(e))
 
-    def on_all_files_changed(self) -> None:
+    def on_extensions_changed(self) -> None:
         self.settings = load_settings()
-        self.settings["register_all_files"] = bool(self.all_files_var.get())
+        exts = normalize_extensions(self.extensions_var.get())
+        self.settings["registered_extensions"] = exts
         save_settings(self.settings)
+        self.extensions_var.set(extension_text(exts))
         try:
             self._auto_update_menu_if_enabled()
+            if not self.settings.get("context_menu_enabled"):
+                self.status_var.set("拡張子を保存しました。右クリックメニューは無効です。")
+            else:
+                self.status_var.set("拡張子を保存して右クリックメニューを再登録しました。")
         except Exception as e:
             messagebox.showerror("右クリック設定エラー", str(e))
 
