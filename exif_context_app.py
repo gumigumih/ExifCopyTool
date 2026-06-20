@@ -488,7 +488,7 @@ def unregister_context_menu() -> None:
         delete_tree(winreg.HKEY_CURRENT_USER, key)
 
 
-def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]]) -> None:
+def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]], applies_to_images: bool = True) -> None:
     if winreg is None:
         raise RuntimeError("Windows専用機能です")
     exe_parts = executable_parts()
@@ -525,10 +525,10 @@ def register_context_menu() -> None:
     formats = load_formats()
     settings = load_settings()
     keys = [MENU_KEY_IMAGE] + MENU_KEYS_EXT
-    if settings.get("register_all_files"):
-        keys.append(MENU_KEY_ALL_FILES)
     for key in keys:
-        register_one_menu(key, formats)
+        register_one_menu(key, formats, applies_to_images=True)
+    if settings.get("register_all_files"):
+        register_one_menu(MENU_KEY_ALL_FILES, formats, applies_to_images=False)
 
 
 def sync_context_menu_enabled(enabled: bool) -> None:

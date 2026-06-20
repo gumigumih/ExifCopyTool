@@ -1,4 +1,4 @@
-ExifCopyTool v6
+ExifCopyTool v7
 
 重要:
 build_windows.bat をダブルクリックして exe を作成してください。
@@ -112,3 +112,8 @@ v4 変更点
 - 右クリック経由のコピー処理を PowerShell Set-Clipboard + 検証を主経路に変更しました。
 - 古いビルドが残らないよう build_windows.bat で build/dist/spec を削除してからビルドします。
 - Win32 GlobalLock 方式は完全に削除しました。
+
+
+[v7]
+- 「全ファイルにも表示する」をONにしたとき、Software\Classes\*\shell にフィルタなしで登録するよう修正しました。
+- 画像専用メニューは従来どおり画像拡張子/画像関連付け側に登録します。
