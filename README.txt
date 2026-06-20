@@ -22,6 +22,7 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 
 ■ インストーラー版の挙動
 - インストール先: %LOCALAPPDATA%\Programs\ExifCopyTool
+- インストール先の選択画面は表示せず、常に上記フォルダへインストールします
 - Python不要
 - Windows起動時に常駐しません
 - 右クリックした時だけ ExifCopyTool.exe が起動します
