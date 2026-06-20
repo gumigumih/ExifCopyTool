@@ -1,3 +1,21 @@
+ExifCopyTool v6
+
+重要:
+build_windows.bat をダブルクリックして exe を作成してください。
+このバッチは ASCII + CRLF に修正済みです。
+
+できあがるファイル:
+dist\ExifCopyTool.exe
+
+右クリックメニュー登録:
+1. dist\ExifCopyTool.exe を起動
+2. 「右クリックメニューを有効にする」にチェック
+3. 画像を右クリックして EXIFコピーを実行
+
+ログ:
+%APPDATA%\ExifCopyTool\last_context_run.log
+%APPDATA%\ExifCopyTool\error.log
+
 EXIFコピー ツール
 ================
 

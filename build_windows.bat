@@ -1,19 +1,49 @@
 @echo off
-setlocal
-cd /d %~dp0
+setlocal EnableExtensions
 
-echo [1/4] Installing requirements...
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+REM Move to this bat file folder safely
+pushd "%~dp0"
 
-echo [2/4] Cleaning old build files...
-rmdir /s /q build 2>nul
-rmdir /s /q dist 2>nul
-del /q ExifCopyTool.spec 2>nul
+echo [1/4] Install requirements
+where python >nul 2>nul
+if %ERRORLEVEL%==0 (
+  set "PYTHON_CMD=python"
+) else (
+  where py >nul 2>nul
+  if %ERRORLEVEL%==0 (
+    set "PYTHON_CMD=py -3"
+  ) else (
+    echo Python was not found. Install Python only on this build PC, then run this file again.
+    pause
+    popd
+    exit /b 1
+  )
+)
 
-echo [3/4] Building ExifCopyTool.exe...
-python -m PyInstaller --noconsole --onefile --name ExifCopyTool exif_context_app.py
+%PYTHON_CMD% -m pip install --upgrade pip
+if errorlevel 1 goto :error
+%PYTHON_CMD% -m pip install -r requirements.txt
+if errorlevel 1 goto :error
 
-echo [4/4] Done.
-echo dist\ExifCopyTool.exe を起動してください。
+echo [2/4] Clean old build files
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+if exist ExifCopyTool.spec del /q ExifCopyTool.spec
+
+echo [3/4] Build ExifCopyTool.exe
+%PYTHON_CMD% -m PyInstaller --noconsole --onefile --name ExifCopyTool exif_context_app.py
+if errorlevel 1 goto :error
+
+echo [4/4] Done
+echo Created: %CD%\dist\ExifCopyTool.exe
 pause
+popd
+exit /b 0
+
+:error
+echo.
+echo Build failed.
+echo Current folder: %CD%
+pause
+popd
+exit /b 1
