@@ -6,6 +6,7 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 ■ 普通に使う場合
 1. build_windows.bat を実行
 2. dist\ExifCopyTool.exe を起動
+   - アプリアイコンは assets\ExifCopyTool.ico を使用します
 3. 「有効にする」にチェック
 4. 任意のファイルを右クリック → EXIF情報をコピー → フォーマットを選択
 5. 設定画面ではテンプレート編集中にサンプルEXIFでプレビューできます
@@ -24,11 +25,13 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 
 ■ インストーラー版の挙動
 - インストール先: %LOCALAPPDATA%\Programs\ExifCopyTool
+- インストール先の選択画面は表示せず、常に上記フォルダへインストールします
 - Python不要
 - Windows起動時に常駐しません
 - 右クリックした時だけ ExifCopyTool.exe が起動します
 - コピー結果をWindows通知で表示します
 - アンインストール時に右クリックメニューも解除します
+- 設定画面から GitHub Releases の更新確認ができます
 - 作者名: ぐみ ( meggumi.com )
 
 ■ exiftool.exe について
@@ -39,3 +42,8 @@ Windowsの右クリックメニューから、ファイルのEXIF情報をテン
 
 0.15.0:
 - 設定画面を単一インスタンス化しました。右クリックから「フォーマット設定を開く」を複数回実行しても、設定画面は1つだけ開きます。
+
+
+■ GitHub Releases 配布
+- v0.15.0 のような v 始まりのタグを push すると GitHub Actions でリリースを作成します
+- 配布物: dist\ExifCopyTool.exe / installer\ExifCopyToolSetup.exe

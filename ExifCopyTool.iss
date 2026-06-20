@@ -10,11 +10,13 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL=https://meggumi.com
 AppSupportURL=https://meggumi.com
-AppUpdatesURL=https://meggumi.com
+AppUpdatesURL=https://github.com/gumigumih/ExifCopyTool/releases
 VersionInfoCompany=ぐみ ( meggumi.com )
 VersionInfoCopyright=© 2026 ぐみ
 VersionInfoProductName={#MyAppName}
 DefaultDirName={localappdata}\Programs\{#MyAppName}
+DisableDirPage=yes
+UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=installer
@@ -23,6 +25,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
+SetupIconFile=assets\ExifCopyTool.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
