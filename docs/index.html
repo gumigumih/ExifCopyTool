@@ -125,6 +125,25 @@
       padding: 22px 24px;
     }
     .steps li { margin: 8px 0; }
+    .screenshot {
+      margin-top: 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .screenshot img {
+      display: block;
+      width: min(100%, 560px);
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 32px rgba(17, 24, 39, .12);
+    }
+    .screenshot p {
+      margin: 12px 0 0;
+      color: var(--muted);
+    }
     footer {
       border-top: 1px solid var(--line);
       color: var(--muted);
@@ -229,7 +248,12 @@
           <li>インストーラーをダウンロードして実行します。</li>
           <li>写真ファイルを右クリックし、「EXIF情報をコピー」からフォーマットを選びます。</li>
           <li>整形されたEXIF情報がクリップボードへコピーされます。</li>
-        </ol>      </div>
+        </ol>
+        <div class="screenshot">
+          <img src="assets/context-menu.png" alt="Exif Copy Tool の右クリックメニュー表示例" loading="lazy">
+          <p>右クリックメニューから、登録したフォーマットを選んでEXIF情報をコピーできます。</p>
+        </div>
+      </div>
     </section>
 
     <section>
