@@ -69,7 +69,9 @@ Windows 10 / Windows 11 対応です。
 
 ## 対応ファイル形式
 
-右クリックメニューの表示対象:
+右クリックメニューは拡張子で絞り込まずに表示します。
+
+主な想定ファイル:
 
 - 一般的な画像: JPEG / PNG / TIFF / HEIC / WebP
 - RAWファイル: ARW / CR2 / CR3 / NEF / RAF / ORF / RW2 / DNG など
