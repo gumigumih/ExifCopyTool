@@ -228,6 +228,10 @@ def context_menu_icon_path() -> str:
     return executable_parts()[0]
 
 
+def context_menu_applies_to() -> str:
+    return " OR ".join(f'System.FileName:"*{ext}"' for ext in DEFAULT_EXTENSIONS)
+
+
 def configure_windows_app_identity() -> None:
     if os.name != "nt":
         return
@@ -790,7 +794,7 @@ def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]]) -> None
     winreg.SetValueEx(root, "MUIVerb", 0, winreg.REG_SZ, "EXIF情報をコピー")
     winreg.SetValueEx(root, "SubCommands", 0, winreg.REG_SZ, "")
     winreg.SetValueEx(root, "Icon", 0, winreg.REG_SZ, context_menu_icon_path())
-    winreg.SetValueEx(root, "AppliesTo", 0, winreg.REG_SZ, "System.FileName:\"*.jpg\" OR System.FileName:\"*.jpeg\" OR System.FileName:\"*.png\" OR System.FileName:\"*.tif\" OR System.FileName:\"*.tiff\" OR System.FileName:\"*.heic\" OR System.FileName:\"*.webp\"")
+    winreg.SetValueEx(root, "AppliesTo", 0, winreg.REG_SZ, context_menu_applies_to())
     shell_key = winreg.CreateKey(root, "shell")
     for idx, fmt in enumerate(formats):
         key_name = f"format_{idx:02d}"

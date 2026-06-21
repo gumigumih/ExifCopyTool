@@ -67,6 +67,15 @@ Windows 10 / Windows 11 対応です。
 - `{DateTimeOriginal}`: 撮影日時
 - `{FileName}`: ファイル名
 
+## 対応ファイル形式
+
+右クリックメニューの表示対象:
+
+- 一般的な画像: JPEG / PNG / TIFF / HEIC / WebP
+- RAWファイル: ARW / CR2 / CR3 / NEF / RAF / ORF / RW2 / DNG など
+
+EXIF情報は、ファイルや環境によって取得できる項目が変わります。取得できた項目だけを使ってコピーします。
+
 ## 利用シーン
 
 ### SNS投稿
