@@ -5,3 +5,4 @@ build/
 dist/
 *.spec
 installer/
+node_modules/

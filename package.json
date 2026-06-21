@@ -1,0 +1,12 @@
+{
+  "name": "exif-copy-tool-site",
+  "private": true,
+  "scripts": {
+    "build:site": "tailwindcss -c tailwind.config.js -i ./site-src/input.css -o ./docs/assets/site.css --minify",
+    "watch:site": "tailwindcss -c tailwind.config.js -i ./site-src/input.css -o ./docs/assets/site.css --watch",
+    "dev:site": "node ./scripts/dev-site.mjs"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

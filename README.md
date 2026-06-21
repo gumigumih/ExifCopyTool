@@ -119,3 +119,18 @@ build_installer.bat
 ```
 
 `installer\ExifCopyToolSetup.exe` が作成されます。
+
+サイト更新:
+
+```bash
+npm install
+npm run build:site
+```
+
+ホットリロード確認:
+
+```bash
+npm run dev:site
+```
+
+`http://127.0.0.1:4173` で配布サイトを確認できます。

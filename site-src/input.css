@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-mist text-ink antialiased;
+    background-image:
+      radial-gradient(circle at top right, rgba(36, 92, 255, 0.12), transparent 28%),
+      radial-gradient(circle at 15% 20%, rgba(15, 118, 110, 0.08), transparent 22%);
+  }
+
+  a {
+    @apply text-brand;
+  }
+}
