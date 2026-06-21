@@ -46,9 +46,9 @@ except Exception:
 APP_NAME = "ExifCopyTool"
 APP_TITLE = "EXIFコピー"
 APP_VERSION = "0.1.1"
-APP_USER_MODEL_ID = "gumigumih.ExifCopyTool"
-UPDATE_API_URL = "https://api.github.com/repos/gumigumih/ExifCopyTool/releases/latest"
-RELEASES_URL = "https://github.com/gumigumih/ExifCopyTool/releases"
+APP_USER_MODEL_ID = "gumigumih.exif-copy-tool"
+UPDATE_API_URL = "https://api.github.com/repos/gumigumih/exif-copy-tool/releases/latest"
+RELEASES_URL = "https://github.com/gumigumih/exif-copy-tool/releases"
 GUI_MUTEX_NAME = "Local\\ExifCopyTool_SettingsWindow"
 _GUI_MUTEX_HANDLE = None
 

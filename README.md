@@ -6,8 +6,8 @@
 
 最新版はGitHub Releasesからダウンロードできます。
 
-- インストーラー版: https://github.com/gumigumih/ExifCopyTool/releases/latest/download/ExifCopyToolSetup.exe
-- リリースページ: https://github.com/gumigumih/ExifCopyTool/releases/latest
+- インストーラー版: https://github.com/gumigumih/exif-copy-tool/releases/latest/download/ExifCopyToolSetup.exe
+- リリースページ: https://github.com/gumigumih/exif-copy-tool/releases/latest
 
 通常はインストーラー版を使ってください。Pythonのインストールは不要です。
 
