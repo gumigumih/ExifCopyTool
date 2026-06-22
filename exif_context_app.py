@@ -45,10 +45,11 @@ except Exception:
 
 APP_NAME = "ExifCopyTool"
 APP_TITLE = "EXIFコピー"
-APP_VERSION = "0.1.1"
+APP_VERSION = "0.1.2"
 APP_USER_MODEL_ID = "gumigumih.exif-copy-tool"
 UPDATE_API_URL = "https://api.github.com/repos/gumigumih/exif-copy-tool/releases/latest"
 RELEASES_URL = "https://github.com/gumigumih/exif-copy-tool/releases"
+INSTALLER_ASSET_NAME = "ExifCopyToolSetup.exe"
 GUI_MUTEX_NAME = "Local\\ExifCopyTool_SettingsWindow"
 _GUI_MUTEX_HANDLE = None
 
@@ -58,13 +59,6 @@ _GUI_MUTEX_HANDLE = None
 MENU_KEY_ALL_FILES = r"Software\Classes\*\shell\ExifCopyTool"
 MENU_KEY_ALL_FILESYSTEM_OBJECTS = r"Software\Classes\AllFilesystemObjects\shell\ExifCopyTool"
 MENU_KEY_IMAGE = r"Software\Classes\SystemFileAssociations\image\shell\ExifCopyTool"
-WIN11_SHELL_CLSID = "{537C902B-D7F5-4F92-8C58-BC9EC5957F13}"
-WIN11_SHELL_CLSID_KEY = rf"Software\Classes\CLSID\{WIN11_SHELL_CLSID}"
-WIN11_SHELL_INPROC_KEY = rf"{WIN11_SHELL_CLSID_KEY}\InprocServer32"
-WIN11_SHELL_ASSEMBLY = "ExifCopyTool.Win11Shell"
-WIN11_SHELL_CLASS = "ExifCopyTool.Win11Shell.ExplorerCommand"
-WIN11_SHELL_COMHOST = "ExifCopyTool.Win11Shell.comhost.dll"
-WIN11_SHELL_DLL = "ExifCopyTool.Win11Shell.dll"
 
 STANDARD_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".webp"]
 RAW_EXTENSIONS = [
@@ -104,6 +98,7 @@ ALL_MENU_KEYS = [MENU_KEY_IMAGE] + [menu_key_for_system_extension(ext) for ext i
 
 DEFAULT_SETTINGS = {
     "context_menu_enabled": True,
+    "classic_context_menu_enabled": True,
 }
 
 DEFAULT_FORMATS = [
@@ -235,45 +230,6 @@ def context_menu_icon_path() -> str:
     return executable_parts()[0]
 
 
-def win11_shell_files_exist() -> bool:
-    base = app_dir()
-    return all((base / name).exists() for name in [WIN11_SHELL_COMHOST, WIN11_SHELL_DLL])
-
-
-def win11_shell_server_path() -> Path:
-    return app_dir() / WIN11_SHELL_COMHOST
-
-
-def win11_shell_assembly_path() -> Path:
-    return app_dir() / WIN11_SHELL_DLL
-
-
-def register_win11_shell_server() -> None:
-    if winreg is None:
-        raise RuntimeError("Windows専用機能です")
-    if not win11_shell_files_exist():
-        raise RuntimeError("Win11用シェル拡張ファイルが見つかりません")
-
-    shell_server = win11_shell_server_path()
-    assembly_path = win11_shell_assembly_path()
-    root = winreg.CreateKey(winreg.HKEY_CURRENT_USER, WIN11_SHELL_CLSID_KEY)
-    winreg.SetValueEx(root, "", 0, winreg.REG_SZ, WIN11_SHELL_ASSEMBLY)
-    winreg.SetValueEx(root, "Class", 0, winreg.REG_SZ, WIN11_SHELL_CLASS)
-    winreg.SetValueEx(root, "Assembly", 0, winreg.REG_SZ, WIN11_SHELL_ASSEMBLY)
-    winreg.SetValueEx(root, "RuntimeVersion", 0, winreg.REG_SZ, "v4.0.30319")
-    winreg.SetValueEx(root, "CodeBase", 0, winreg.REG_SZ, assembly_path.as_uri())
-    inproc = winreg.CreateKey(root, "InprocServer32")
-    winreg.SetValueEx(inproc, "", 0, winreg.REG_SZ, str(shell_server))
-    winreg.SetValueEx(inproc, "ThreadingModel", 0, winreg.REG_SZ, "Both")
-    winreg.CloseKey(inproc)
-    winreg.CloseKey(root)
-
-
-def unregister_win11_shell_server() -> None:
-    if winreg is None:
-        return
-    delete_tree(winreg.HKEY_CURRENT_USER, WIN11_SHELL_CLSID_KEY)
-
 
 
 def configure_windows_app_identity() -> None:
@@ -336,15 +292,30 @@ def load_settings() -> Dict[str, Any]:
             loaded = json.loads(p.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 s.update(loaded)
+                legacy_enabled = bool(loaded.get("context_menu_enabled", True))
+                if "classic_context_menu_enabled" not in loaded:
+                    s["classic_context_menu_enabled"] = legacy_enabled
         except Exception:
             pass
+    s["context_menu_enabled"] = bool(s.get("context_menu_enabled", False))
     return s
 
 
 def save_settings(settings: Dict[str, Any]) -> None:
     merged = dict(DEFAULT_SETTINGS)
     merged.update(settings)
+    merged["context_menu_enabled"] = bool(merged.get("context_menu_enabled", False))
     settings_path().write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def get_context_menu_modes(settings: Dict[str, Any] | None = None) -> Tuple[bool, bool]:
+    current = settings if settings is not None else load_settings()
+    return (bool(current.get("classic_context_menu_enabled")), False)
+
+
+def context_menu_mode_label(settings: Dict[str, Any] | None = None) -> str:
+    classic_enabled, _ = get_context_menu_modes(settings)
+    return "右クリックメニュー" if classic_enabled else "無効"
 
 
 def executable_parts() -> List[str]:
@@ -506,11 +477,52 @@ def fetch_latest_release() -> Dict[str, str]:
     req = urllib.request.Request(UPDATE_API_URL, headers={"User-Agent": APP_NAME})
     with urllib.request.urlopen(req, timeout=8) as res:
         data = json.loads(res.read().decode("utf-8"))
+
+    installer_url = ""
+    for asset in data.get("assets", []):
+        if not isinstance(asset, dict):
+            continue
+
+        name = str(asset.get("name", ""))
+        if name == INSTALLER_ASSET_NAME:
+            installer_url = str(asset.get("browser_download_url", ""))
+            break
+
+    if not installer_url:
+        for asset in data.get("assets", []):
+            if not isinstance(asset, dict):
+                continue
+
+            name = str(asset.get("name", "")).lower()
+            if name.endswith(".exe") and "setup" in name:
+                installer_url = str(asset.get("browser_download_url", ""))
+                break
+
     return {
         "tag_name": str(data.get("tag_name", "")),
         "html_url": str(data.get("html_url", RELEASES_URL)),
         "name": str(data.get("name", "")),
+        "installer_url": installer_url,
     }
+
+
+def download_and_run_installer(download_url: str) -> Path:
+    update_dir = Path(os.environ.get("TEMP", str(Path.home()))) / APP_NAME / "updates"
+    update_dir.mkdir(parents=True, exist_ok=True)
+    installer_path = update_dir / INSTALLER_ASSET_NAME
+
+    req = urllib.request.Request(download_url, headers={"User-Agent": APP_NAME})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        with installer_path.open("wb") as f:
+            shutil.copyfileobj(res, f)
+
+    subprocess.Popen([str(installer_path)], cwd=str(update_dir))
+    return installer_path
+
+
+def exit_for_update(app: "App") -> None:
+    app.after(0, app.on_close)
+    app.after(50, lambda: (_ for _ in ()).throw(SystemExit(0)))
 
 
 def copy_to_clipboard_tk(text: str, hold_ms: int = 800) -> None:
@@ -813,7 +825,11 @@ def registered_menu_keys_from_settings() -> List[str]:
     """
     settings = load_settings()
     previous = normalize_extensions(settings.get("last_registered_extensions", []))
-    keys = [MENU_KEY_ALL_FILES, MENU_KEY_ALL_FILESYSTEM_OBJECTS, MENU_KEY_IMAGE]
+    keys = [
+        MENU_KEY_ALL_FILES,
+        MENU_KEY_ALL_FILESYSTEM_OBJECTS,
+        MENU_KEY_IMAGE,
+    ]
     for ext in sorted(set(KNOWN_EXTENSIONS + previous + DEFAULT_EXTENSIONS)):
         keys.extend(menu_keys_for_extension(ext, include_resolved_progids=True))
     result: List[str] = []
@@ -828,10 +844,9 @@ def unregister_context_menu() -> None:
         raise RuntimeError("Windows専用機能です")
     for key in registered_menu_keys_from_settings():
         delete_tree(winreg.HKEY_CURRENT_USER, key)
-    unregister_win11_shell_server()
 
 
-def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]], explorer_command_handler: str | None = None) -> None:
+def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]]) -> None:
     if winreg is None:
         raise RuntimeError("Windows専用機能です")
     exe_parts = executable_parts()
@@ -839,8 +854,6 @@ def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]], explore
     winreg.SetValueEx(root, "MUIVerb", 0, winreg.REG_SZ, "EXIF情報をコピー")
     winreg.SetValueEx(root, "SubCommands", 0, winreg.REG_SZ, "")
     winreg.SetValueEx(root, "Icon", 0, winreg.REG_SZ, context_menu_icon_path())
-    if explorer_command_handler:
-        winreg.SetValueEx(root, "ExplorerCommandHandler", 0, winreg.REG_SZ, explorer_command_handler)
     shell_key = winreg.CreateKey(root, "shell")
     for idx, fmt in enumerate(formats):
         key_name = f"format_{idx:02d}"
@@ -862,23 +875,27 @@ def register_one_menu(menu_root_key: str, formats: List[Dict[str, str]], explore
     winreg.CloseKey(root)
 
 
-def register_context_menu() -> None:
+def register_context_menu(enable_classic: bool | None = None, _unused_enable_win11: bool | None = None) -> None:
     if winreg is None:
         raise RuntimeError("Windows専用機能です")
-    unregister_context_menu()
-    formats = load_formats()
-    win11_available = win11_shell_files_exist()
-    if win11_available:
-        register_win11_shell_server()
-    # Register broadly so the menu appears from both classic Explorer verbs
-    # and Win11-friendly file associations.
-    handler = WIN11_SHELL_CLSID if win11_available else None
-    register_one_menu(MENU_KEY_ALL_FILES, formats, handler)
-    register_one_menu(MENU_KEY_ALL_FILESYSTEM_OBJECTS, formats, handler)
-    register_one_menu(MENU_KEY_IMAGE, formats, handler)
-    for ext in DEFAULT_EXTENSIONS:
-        register_one_menu(menu_key_for_system_extension(ext), formats, handler)
     settings = load_settings()
+    classic_enabled = get_context_menu_modes(settings)[0] if enable_classic is None else bool(enable_classic)
+
+    unregister_context_menu()
+    if not classic_enabled:
+        settings["classic_context_menu_enabled"] = False
+        settings["context_menu_enabled"] = False
+        save_settings(settings)
+        return
+
+    formats = load_formats()
+    register_one_menu(MENU_KEY_ALL_FILES, formats)
+    register_one_menu(MENU_KEY_ALL_FILESYSTEM_OBJECTS, formats)
+    register_one_menu(MENU_KEY_IMAGE, formats)
+    for ext in DEFAULT_EXTENSIONS:
+        register_one_menu(menu_key_for_system_extension(ext), formats)
+
+    settings["classic_context_menu_enabled"] = True
     settings["context_menu_enabled"] = True
     # Keep this so cleanup can remove old v10/v11 extension registrations.
     settings["last_registered_extensions"] = DEFAULT_EXTENSIONS
@@ -887,29 +904,37 @@ def register_context_menu() -> None:
 
 def sync_context_menu_enabled(enabled: bool) -> None:
     settings = load_settings()
+    classic_enabled, _ = get_context_menu_modes(settings)
+    if enabled and not classic_enabled:
+        classic_enabled = True
+        settings["classic_context_menu_enabled"] = True
     settings["context_menu_enabled"] = bool(enabled)
     save_settings(settings)
     if enabled:
-        register_context_menu()
+        register_context_menu(classic_enabled)
     else:
         unregister_context_menu()
 
 
-def is_menu_probably_registered() -> bool:
+def is_menu_probably_registered(enable_classic: bool | None = None, _unused_enable_win11: bool | None = None) -> bool:
     if winreg is None:
         return False
-    for key in [MENU_KEY_ALL_FILES, MENU_KEY_ALL_FILESYSTEM_OBJECTS, MENU_KEY_IMAGE]:
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key):
-                return True
-        except Exception:
-            pass
-    for ext in DEFAULT_EXTENSIONS:
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, menu_key_for_system_extension(ext)):
-                return True
-        except Exception:
-            pass
+    settings = load_settings()
+    classic_enabled = get_context_menu_modes(settings)[0] if enable_classic is None else bool(enable_classic)
+    if classic_enabled:
+        for key in [MENU_KEY_ALL_FILES, MENU_KEY_ALL_FILESYSTEM_OBJECTS, MENU_KEY_IMAGE]:
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key):
+                    return True
+            except Exception:
+                pass
+        for ext in DEFAULT_EXTENSIONS:
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, menu_key_for_system_extension(ext)):
+                    return True
+            except Exception:
+                pass
+
     return False
 
 
@@ -979,10 +1004,10 @@ class App(tk.Tk):
         self._refresh_status()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         # If settings says enabled but registry is missing, repair automatically on launch.
-        if self.settings.get("context_menu_enabled") and winreg is not None and not is_menu_probably_registered():
+        if self.settings.get("context_menu_enabled") and winreg is not None and not is_menu_probably_registered(*get_context_menu_modes(self.settings)):
             try:
                 register_context_menu()
-                self.status_var.set("右クリックメニューを自動修復しました。")
+                self.status_var.set(f"右クリックメニューを自動修復しました。({context_menu_mode_label(self.settings)})")
             except Exception as e:
                 self.status_var.set(f"右クリックメニュー自動修復に失敗: {e}")
 
@@ -1061,18 +1086,22 @@ class App(tk.Tk):
         if winreg is None:
             self.status_var.set("Windows以外では右クリック登録不可")
             return
-        enabled = bool(load_settings().get("context_menu_enabled"))
-        registered = is_menu_probably_registered()
+        settings = load_settings()
+        enabled = bool(settings.get("context_menu_enabled"))
+        modes = get_context_menu_modes(settings)
+        registered = is_menu_probably_registered(*modes)
+        label = context_menu_mode_label(settings)
         if enabled and registered:
-            self.status_var.set("有効：登録済み")
+            self.status_var.set(f"有効：登録済み ({label})")
         elif enabled and not registered:
-            self.status_var.set("有効：未登録（次回起動時に修復）")
+            self.status_var.set(f"有効：未登録（次回起動時に修復） ({label})")
         else:
             self.status_var.set("無効")
 
     def _auto_update_menu_if_enabled(self) -> None:
-        if load_settings().get("context_menu_enabled"):
-            register_context_menu()
+        settings = load_settings()
+        if settings.get("context_menu_enabled"):
+            register_context_menu(*get_context_menu_modes(settings))
             self._refresh_status()
 
     def _refresh_list(self) -> None:
@@ -1113,8 +1142,33 @@ class App(tk.Tk):
         tag = latest.get("tag_name") or "取得できません"
         message = f"現在のバージョン: {APP_VERSION}\n最新バージョン: {tag}"
         if tag != "取得できません" and parse_version(tag) > parse_version(APP_VERSION):
-            if messagebox.askyesno("更新があります", message + "\n\n配布ページを開きますか？"):
-                webbrowser.open(latest.get("html_url") or RELEASES_URL)
+            if not messagebox.askyesno(
+                "更新があります",
+                message
+                + "\n\n最新版をダウンロードして実行しますか？"
+            ):
+                return
+
+            installer_url = latest.get("installer_url") or ""
+            if not installer_url:
+                if messagebox.askyesno(
+                    "更新を取得できません",
+                    "インストーラーのダウンロードURLが見つかりませんでした。\n\n配布ページを開きますか？",
+                ):
+                    webbrowser.open(latest.get("html_url") or RELEASES_URL)
+                return
+
+            try:
+                download_and_run_installer(installer_url)
+            except Exception as e:
+                if messagebox.askyesno(
+                    "更新実行エラー",
+                    f"インストーラーをダウンロードまたは実行できませんでした。\n\n{e}\n\n配布ページを開きますか？",
+                ):
+                    webbrowser.open(latest.get("html_url") or RELEASES_URL)
+                return
+
+            exit_for_update(self)
             return
         messagebox.showinfo("更新確認", "最新版です。\n\n" + message)
 
@@ -1206,9 +1260,10 @@ def main() -> None:
     try:
         if "--register-context-menu" in sys.argv:
             settings = load_settings()
+            settings["classic_context_menu_enabled"] = True
             settings["context_menu_enabled"] = True
             save_settings(settings)
-            register_context_menu()
+            register_context_menu(True)
             return
         if "--unregister-context-menu" in sys.argv:
             settings = load_settings()
