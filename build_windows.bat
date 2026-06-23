@@ -29,13 +29,13 @@ if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 if exist ExifCopyTool.spec del /q ExifCopyTool.spec
 
-echo [4/4] Building ExifCopyTool.exe
-%PYTHON_CMD% -m PyInstaller --noconsole --onefile --name ExifCopyTool --icon assets\ExifCopyTool.ico --add-data "assets\ExifCopyTool.ico;assets" exif_context_app.py
+echo [4/4] Building ExifCopyTool
+%PYTHON_CMD% -m PyInstaller --noconsole --onedir --clean --noupx --name ExifCopyTool --icon assets\ExifCopyTool.ico --add-data "assets\ExifCopyTool.ico;assets" exif_context_app.py
 if errorlevel 1 goto :error
 
 echo.
 echo Done.
-echo Created: %CD%\dist\ExifCopyTool.exe
+echo Created: %CD%\dist\ExifCopyTool\ExifCopyTool.exe
 pause
 popd
 exit /b 0

@@ -2,8 +2,8 @@
 setlocal EnableExtensions
 pushd "%~dp0"
 
-if not exist "dist\ExifCopyTool.exe" (
-  echo dist\ExifCopyTool.exe was not found.
+if not exist "dist\ExifCopyTool\ExifCopyTool.exe" (
+  echo dist\ExifCopyTool\ExifCopyTool.exe was not found.
   echo Run build_windows.bat first.
   pause
   popd

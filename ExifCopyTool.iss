@@ -1,5 +1,5 @@
 #define MyAppName "ExifCopyTool"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "ぐみ ( meggumi.com )"
 #define MyAppExeName "ExifCopyTool.exe"
 
@@ -36,7 +36,7 @@ Name: "contextmenu"; Description: "右クリックメニューを有効にする
 Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; GroupDescription: "ショートカット:"; Flags: unchecked
 
 [Files]
-Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\ExifCopyTool\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "assets\ExifCopyTool.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "exiftool.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
@@ -49,4 +49,4 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--register-context-menu"; Flags:
 Filename: "{app}\{#MyAppExeName}"; Description: "{#MyAppName} を起動"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--unregister-context-menu"; Flags: runhidden
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--unregister-context-menu"; Flags: runhidden; RunOnceId: "UnregisterContextMenu"

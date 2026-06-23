@@ -33,7 +33,12 @@ jobs:
           if (Test-Path "assets/ExifCopyTool.ico") {
             $iconArgs = @("--icon", "assets/ExifCopyTool.ico", "--add-data", "assets/ExifCopyTool.ico;assets")
           }
-          python -m PyInstaller --noconsole --onefile --name ExifCopyTool @iconArgs exif_context_app.py
+          python -m PyInstaller --noconsole --onedir --clean --noupx --name ExifCopyTool @iconArgs exif_context_app.py
+
+      - name: Package portable app
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/ExifCopyTool -DestinationPath dist/ExifCopyTool.zip -Force
 
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
@@ -48,5 +53,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/ExifCopyTool.exe
+            dist/ExifCopyTool.zip
             installer/ExifCopyToolSetup.exe
