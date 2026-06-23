@@ -112,14 +112,23 @@ Discordやフォーラムで撮影データを共有したいとき。
 
 ## 開発者向け
 
-ローカルでビルドする場合:
+### ローカルビルド
+
+Python と Inno Setup 6 が入っている Windows 環境でビルドできます。
 
 ```bat
 build_windows.bat
 build_installer.bat
 ```
 
-`installer\ExifCopyToolSetup.exe` が作成されます。
+作成されるファイル:
+
+- アプリ本体: `dist\ExifCopyTool\ExifCopyTool.exe`
+- インストーラー: `installer\ExifCopyToolSetup.exe`
+
+配布版はセキュリティソフトで警告される場合があります。Python 環境がある場合は、ローカルでビルドするとダウンロード由来の警告を避けられることがあります。ただし、署名なしアプリのため環境によっては自ビルドでも警告される場合があります。
+
+### 配布サイト
 
 サイト更新:
 
